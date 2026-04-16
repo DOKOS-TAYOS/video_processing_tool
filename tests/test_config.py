@@ -40,6 +40,13 @@ def test_load_app_config_reads_toml_values(tmp_path: Path) -> None:
         attack_ms = 5.0
         release_ms = 100.0
         makeup_gain_db = 1.0
+
+        [sync_detection]
+        speech_window_ms = 40
+        speech_min_duration_ms = 250
+        speech_threshold_dbfs = -30.0
+        loud_sound_window_ms = 15
+        loud_sound_threshold_dbfs = -12.0
         """,
         encoding="utf-8",
     )
@@ -51,6 +58,58 @@ def test_load_app_config_reads_toml_values(tmp_path: Path) -> None:
     assert config.paths.filter_curve_csv == curve_path
     assert config.noise_profile.start_seconds == pytest.approx(1.0)
     assert config.compression.ratio == pytest.approx(2.5)
+    assert config.sync_detection.speech_window_ms == 40
+    assert config.sync_detection.speech_threshold_dbfs == pytest.approx(-30.0)
+    assert config.sync_detection.loud_sound_threshold_dbfs == pytest.approx(-12.0)
+
+
+def test_load_app_config_uses_default_sync_detection_when_section_is_missing(
+    tmp_path: Path,
+) -> None:
+    curve_path = tmp_path / "curve.csv"
+    curve_path.write_text("frequency_hz,gain_db\n100,0\n1000,1.5\n10000,-2\n", encoding="utf-8")
+    config_path = tmp_path / "settings.toml"
+    config_path.write_text(
+        """
+        [app]
+        default_output_format = "wav"
+        sample_rate = 48000
+
+        [paths]
+        filter_curve_csv = "curve.csv"
+
+        [noise_profile]
+        start_seconds = 1.0
+        duration_seconds = 1.0
+
+        [noise_reduction]
+        reduction_db = 9.0
+        sensitivity = 6.0
+        smoothing = 3.0
+
+        [loudness]
+        target_lufs = -17.0
+
+        [peak_normalization]
+        target_peak_db = -1.0
+
+        [compression]
+        threshold_db = -18.0
+        ratio = 2.5
+        attack_ms = 5.0
+        release_ms = 100.0
+        makeup_gain_db = 1.0
+        """,
+        encoding="utf-8",
+    )
+
+    config = load_app_config(config_path)
+
+    assert config.sync_detection.speech_window_ms == 40
+    assert config.sync_detection.speech_min_duration_ms == 250
+    assert config.sync_detection.speech_threshold_dbfs == pytest.approx(-32.0)
+    assert config.sync_detection.loud_sound_window_ms == 15
+    assert config.sync_detection.loud_sound_threshold_dbfs == pytest.approx(-12.0)
 
 
 def test_build_output_path_adds_processed_suffix_without_overwriting(tmp_path: Path) -> None:

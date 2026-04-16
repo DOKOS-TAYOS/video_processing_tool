@@ -27,3 +27,10 @@ ratio = 2.5
 attack_ms = 5.0
 release_ms = 100.0
 makeup_gain_db = 1.0
+
+[sync_detection]
+speech_window_ms = 40
+speech_min_duration_ms = 250
+speech_threshold_dbfs = -32.0
+loud_sound_window_ms = 15
+loud_sound_threshold_dbfs = -12.0

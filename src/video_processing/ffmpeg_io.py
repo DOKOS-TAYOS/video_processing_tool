@@ -19,6 +19,10 @@ class FFmpegCommandError(RuntimeError):
     """Raised when an FFmpeg command fails."""
 
 
+class FFmpegNoAudioStreamError(FFmpegCommandError):
+    """Raised when the input media has no usable audio stream."""
+
+
 AudioArray = NDArray[np.float32]
 PCM_SUBTYPE: Final[str] = "PCM_16"
 
@@ -65,6 +69,18 @@ def _run_ffmpeg(command: list[str]) -> None:
         raise FFmpegCommandError(stderr)
 
 
+def _looks_like_missing_audio_stream(error_message: str) -> bool:
+    normalized_message = error_message.lower()
+    patterns = (
+        "does not contain any stream",
+        "matches no streams",
+        "stream map",
+        "audio stream",
+        "without any stream",
+    )
+    return any(pattern in normalized_message for pattern in patterns)
+
+
 def decode_audio_file(
     input_path: Path,
     sample_rate: int,
@@ -83,7 +99,13 @@ def decode_audio_file(
         "pcm_s16le",
         str(decoded_path),
     ]
-    _run_ffmpeg(command)
+    try:
+        _run_ffmpeg(command)
+    except FFmpegCommandError as exc:
+        if _looks_like_missing_audio_stream(str(exc)):
+            message = "El archivo no contiene una pista de audio utilizable para el modo 1."
+            raise FFmpegNoAudioStreamError(message) from exc
+        raise
     audio, detected_sample_rate = sf.read(decoded_path, dtype="float32", always_2d=False)
     return np.asarray(audio, dtype=np.float32), int(detected_sample_rate)
 

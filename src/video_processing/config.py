@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
@@ -44,6 +44,25 @@ class CompressionConfig:
 
 
 @dataclass(frozen=True)
+class SyncDetectionConfig:
+    speech_window_ms: int
+    speech_min_duration_ms: int
+    speech_threshold_dbfs: float
+    loud_sound_window_ms: int
+    loud_sound_threshold_dbfs: float
+
+
+def get_default_sync_detection_config() -> SyncDetectionConfig:
+    return SyncDetectionConfig(
+        speech_window_ms=40,
+        speech_min_duration_ms=250,
+        speech_threshold_dbfs=-32.0,
+        loud_sound_window_ms=15,
+        loud_sound_threshold_dbfs=-12.0,
+    )
+
+
+@dataclass(frozen=True)
 class AppConfig:
     default_output_format: str
     sample_rate: int
@@ -53,6 +72,7 @@ class AppConfig:
     loudness: LoudnessConfig
     peak_normalization: PeakNormalizationConfig
     compression: CompressionConfig
+    sync_detection: SyncDetectionConfig = field(default_factory=get_default_sync_detection_config)
 
 
 def get_project_root() -> Path:
@@ -87,6 +107,8 @@ def load_app_config(config_path: Path | None = None) -> AppConfig:
     loudness_section = raw_config["loudness"]
     peak_section = raw_config["peak_normalization"]
     compression_section = raw_config["compression"]
+    sync_detection_section = raw_config.get("sync_detection", {})
+    default_sync_detection = get_default_sync_detection_config()
 
     default_curve_raw = paths_section.get("default_filter_curve_csv")
     default_curve_path = (
@@ -121,5 +143,37 @@ def load_app_config(config_path: Path | None = None) -> AppConfig:
             attack_ms=float(compression_section["attack_ms"]),
             release_ms=float(compression_section["release_ms"]),
             makeup_gain_db=float(compression_section["makeup_gain_db"]),
+        ),
+        sync_detection=SyncDetectionConfig(
+            speech_window_ms=int(
+                sync_detection_section.get(
+                    "speech_window_ms",
+                    default_sync_detection.speech_window_ms,
+                )
+            ),
+            speech_min_duration_ms=int(
+                sync_detection_section.get(
+                    "speech_min_duration_ms",
+                    default_sync_detection.speech_min_duration_ms,
+                )
+            ),
+            speech_threshold_dbfs=float(
+                sync_detection_section.get(
+                    "speech_threshold_dbfs",
+                    default_sync_detection.speech_threshold_dbfs,
+                )
+            ),
+            loud_sound_window_ms=int(
+                sync_detection_section.get(
+                    "loud_sound_window_ms",
+                    default_sync_detection.loud_sound_window_ms,
+                )
+            ),
+            loud_sound_threshold_dbfs=float(
+                sync_detection_section.get(
+                    "loud_sound_threshold_dbfs",
+                    default_sync_detection.loud_sound_threshold_dbfs,
+                )
+            ),
         ),
     )
