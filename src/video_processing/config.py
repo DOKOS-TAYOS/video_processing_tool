@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -52,6 +53,22 @@ class SyncDetectionConfig:
     loud_sound_threshold_dbfs: float
 
 
+@dataclass(frozen=True)
+class SilenceEditingConfig:
+    silence_threshold_dbfs: float
+    min_trim_silence_seconds: float
+    long_pause_seconds: float
+    edge_padding_seconds: float
+
+
+@dataclass(frozen=True)
+class PauseMarkerConfig:
+    beep_frequency_hz: float
+    beep_duration_ms: int
+    beep_level_dbfs: float
+    fade_ms: int
+
+
 def get_default_sync_detection_config() -> SyncDetectionConfig:
     return SyncDetectionConfig(
         speech_window_ms=40,
@@ -59,6 +76,24 @@ def get_default_sync_detection_config() -> SyncDetectionConfig:
         speech_threshold_dbfs=-32.0,
         loud_sound_window_ms=15,
         loud_sound_threshold_dbfs=-12.0,
+    )
+
+
+def get_default_silence_editing_config() -> SilenceEditingConfig:
+    return SilenceEditingConfig(
+        silence_threshold_dbfs=-38.0,
+        min_trim_silence_seconds=0.8,
+        long_pause_seconds=2.0,
+        edge_padding_seconds=0.1,
+    )
+
+
+def get_default_pause_marker_config() -> PauseMarkerConfig:
+    return PauseMarkerConfig(
+        beep_frequency_hz=1000.0,
+        beep_duration_ms=120,
+        beep_level_dbfs=-12.0,
+        fade_ms=10,
     )
 
 
@@ -73,9 +108,17 @@ class AppConfig:
     peak_normalization: PeakNormalizationConfig
     compression: CompressionConfig
     sync_detection: SyncDetectionConfig = field(default_factory=get_default_sync_detection_config)
+    silence_editing: SilenceEditingConfig = field(
+        default_factory=get_default_silence_editing_config
+    )
+    pause_marker: PauseMarkerConfig = field(default_factory=get_default_pause_marker_config)
 
 
 def get_project_root() -> Path:
+    if getattr(sys, "frozen", False):
+        bundle_root = getattr(sys, "_MEIPASS", None)
+        if bundle_root is not None:
+            return Path(bundle_root)
     return Path(__file__).resolve().parents[2]
 
 
@@ -108,7 +151,11 @@ def load_app_config(config_path: Path | None = None) -> AppConfig:
     peak_section = raw_config["peak_normalization"]
     compression_section = raw_config["compression"]
     sync_detection_section = raw_config.get("sync_detection", {})
+    silence_editing_section = raw_config.get("silence_editing", {})
+    pause_marker_section = raw_config.get("pause_marker", {})
     default_sync_detection = get_default_sync_detection_config()
+    default_silence_editing = get_default_silence_editing_config()
+    default_pause_marker = get_default_pause_marker_config()
 
     default_curve_raw = paths_section.get("default_filter_curve_csv")
     default_curve_path = (
@@ -173,6 +220,58 @@ def load_app_config(config_path: Path | None = None) -> AppConfig:
                 sync_detection_section.get(
                     "loud_sound_threshold_dbfs",
                     default_sync_detection.loud_sound_threshold_dbfs,
+                )
+            ),
+        ),
+        silence_editing=SilenceEditingConfig(
+            silence_threshold_dbfs=float(
+                silence_editing_section.get(
+                    "silence_threshold_dbfs",
+                    default_silence_editing.silence_threshold_dbfs,
+                )
+            ),
+            min_trim_silence_seconds=float(
+                silence_editing_section.get(
+                    "min_trim_silence_seconds",
+                    default_silence_editing.min_trim_silence_seconds,
+                )
+            ),
+            long_pause_seconds=float(
+                silence_editing_section.get(
+                    "long_pause_seconds",
+                    default_silence_editing.long_pause_seconds,
+                )
+            ),
+            edge_padding_seconds=float(
+                silence_editing_section.get(
+                    "edge_padding_seconds",
+                    default_silence_editing.edge_padding_seconds,
+                )
+            ),
+        ),
+        pause_marker=PauseMarkerConfig(
+            beep_frequency_hz=float(
+                pause_marker_section.get(
+                    "beep_frequency_hz",
+                    default_pause_marker.beep_frequency_hz,
+                )
+            ),
+            beep_duration_ms=int(
+                pause_marker_section.get(
+                    "beep_duration_ms",
+                    default_pause_marker.beep_duration_ms,
+                )
+            ),
+            beep_level_dbfs=float(
+                pause_marker_section.get(
+                    "beep_level_dbfs",
+                    default_pause_marker.beep_level_dbfs,
+                )
+            ),
+            fade_ms=int(
+                pause_marker_section.get(
+                    "fade_ms",
+                    default_pause_marker.fade_ms,
                 )
             ),
         ),

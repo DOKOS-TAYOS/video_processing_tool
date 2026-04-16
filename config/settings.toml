@@ -34,3 +34,15 @@ speech_min_duration_ms = 250
 speech_threshold_dbfs = -32.0
 loud_sound_window_ms = 15
 loud_sound_threshold_dbfs = -12.0
+
+[silence_editing]
+silence_threshold_dbfs = -38.0
+min_trim_silence_seconds = 0.8
+long_pause_seconds = 2.0
+edge_padding_seconds = 0.1
+
+[pause_marker]
+beep_frequency_hz = 1000.0
+beep_duration_ms = 120
+beep_level_dbfs = -12.0
+fade_ms = 10

@@ -74,7 +74,10 @@ def test_process_mode_1_job_writes_processed_audio_and_edit_plan(
     monkeypatch.setattr("video_processing.mode_1.remove_runtime_directory", lambda _: None)
     monkeypatch.setattr(
         "video_processing.mode_1.decode_audio_file",
-        lambda input_path, sample_rate, runtime_dir: (source_audio, sample_rate),
+        lambda input_path, sample_rate, runtime_dir, missing_audio_message=None: (
+            source_audio,
+            sample_rate,
+        ),
     )
     monkeypatch.setattr(
         "video_processing.mode_1.run_audio_pipeline",
@@ -121,5 +124,15 @@ def test_process_mode_1_job_writes_processed_audio_and_edit_plan(
     assert payload["input_media_path"] == str(input_path)
     assert payload["processed_audio_path"] == str(result.output_path)
     assert payload["recommended_anchor"] == "speech_start"
+    assert payload["inputs"] == {
+        "input_video_path": str(input_path),
+        "input_external_audio_path": None,
+    }
+    assert payload["video_sync"] == {
+        "external_audio_offset_seconds": None,
+        "offset_anchor": None,
+        "camera_anchors": None,
+    }
+    assert payload["edits"] == []
     assert payload["anchors"]["speech_start"]["source_seconds"] == pytest.approx(0.5)
     assert payload["anchors"]["first_loud_sound"]["processed_seconds"] == pytest.approx(1.1)

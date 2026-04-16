@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Final
@@ -51,7 +53,10 @@ def build_output_path(input_path: Path, output_dir: Path, output_format: str) ->
 
 
 def create_runtime_directory(base_dir: Path) -> Path:
-    runtime_root = base_dir / ".tmp" / "runtime"
+    if getattr(sys, "frozen", False):
+        runtime_root = Path(tempfile.gettempdir()) / "video-processing" / "runtime"
+    else:
+        runtime_root = base_dir / ".tmp" / "runtime"
     runtime_root.mkdir(parents=True, exist_ok=True)
     job_dir = runtime_root / uuid.uuid4().hex
     job_dir.mkdir(parents=True, exist_ok=True)
@@ -85,6 +90,7 @@ def decode_audio_file(
     input_path: Path,
     sample_rate: int,
     runtime_dir: Path,
+    missing_audio_message: str | None = None,
 ) -> tuple[AudioArray, int]:
     decoded_path = runtime_dir / "decoded.wav"
     command = [
@@ -103,7 +109,10 @@ def decode_audio_file(
         _run_ffmpeg(command)
     except FFmpegCommandError as exc:
         if _looks_like_missing_audio_stream(str(exc)):
-            message = "El archivo no contiene una pista de audio utilizable para el modo 1."
+            message = (
+                missing_audio_message
+                or "El archivo no contiene una pista de audio utilizable para el modo 1."
+            )
             raise FFmpegNoAudioStreamError(message) from exc
         raise
     audio, detected_sample_rate = sf.read(decoded_path, dtype="float32", always_2d=False)

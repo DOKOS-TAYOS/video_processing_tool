@@ -30,6 +30,20 @@ class Mode1SyncAnchors:
     first_loud_sound: SyncAnchor | None
 
 
+@dataclass(frozen=True)
+class TrackAnchors:
+    speech_start: DetectedAnchor | None
+    first_loud_sound: DetectedAnchor | None
+
+
+@dataclass(frozen=True)
+class VideoSyncResult:
+    external_audio_offset_seconds: float | None
+    offset_anchor: str | None
+    camera_anchors: TrackAnchors
+    warnings: list[str]
+
+
 def mix_to_mono(audio: AudioArray) -> AudioArray:
     if audio.ndim == 1:
         return np.asarray(audio, dtype=np.float32)
@@ -164,13 +178,83 @@ def detect_mode_1_anchors(
     return anchors, recommend_anchor_name(speech_start, first_loud_sound), warnings
 
 
+def detect_track_anchors(
+    audio: AudioArray,
+    sample_rate: int,
+    config: SyncDetectionConfig,
+) -> TrackAnchors:
+    return TrackAnchors(
+        speech_start=detect_speech_start(audio, sample_rate, config),
+        first_loud_sound=detect_first_loud_sound(audio, sample_rate, config),
+    )
+
+
+def calculate_video_sync(
+    external_audio: AudioArray,
+    camera_audio: AudioArray,
+    sample_rate: int,
+    config: SyncDetectionConfig,
+) -> VideoSyncResult:
+    external_anchors = detect_track_anchors(external_audio, sample_rate, config)
+    camera_anchors = detect_track_anchors(camera_audio, sample_rate, config)
+    warnings: list[str] = []
+
+    speech_offset: float | None = None
+    if external_anchors.speech_start is not None and camera_anchors.speech_start is not None:
+        speech_offset = external_anchors.speech_start.seconds - camera_anchors.speech_start.seconds
+
+    loud_sound_offset: float | None = None
+    if (
+        external_anchors.first_loud_sound is not None
+        and camera_anchors.first_loud_sound is not None
+    ):
+        loud_sound_offset = (
+            external_anchors.first_loud_sound.seconds - camera_anchors.first_loud_sound.seconds
+        )
+
+    if speech_offset is not None:
+        if loud_sound_offset is not None and abs(speech_offset - loud_sound_offset) > 0.15:
+            warnings.append(
+                "Las anclas compartidas no coinciden en el offset. "
+                "Se usara speech_start como referencia."
+            )
+        return VideoSyncResult(
+            external_audio_offset_seconds=speech_offset,
+            offset_anchor="speech_start",
+            camera_anchors=camera_anchors,
+            warnings=warnings,
+        )
+
+    if loud_sound_offset is not None:
+        return VideoSyncResult(
+            external_audio_offset_seconds=loud_sound_offset,
+            offset_anchor="first_loud_sound",
+            camera_anchors=camera_anchors,
+            warnings=warnings,
+        )
+
+    warnings.append(
+        "No se pudo calcular un offset fiable entre el audio externo y el audio de camara."
+    )
+    return VideoSyncResult(
+        external_audio_offset_seconds=None,
+        offset_anchor=None,
+        camera_anchors=camera_anchors,
+        warnings=warnings,
+    )
+
+
 __all__ = [
     "DetectedAnchor",
     "Mode1SyncAnchors",
+    "TrackAnchors",
     "SyncAnchor",
+    "VideoSyncResult",
+    "calculate_video_sync",
     "detect_first_loud_sound",
     "detect_mode_1_anchors",
     "detect_speech_start",
+    "detect_track_anchors",
     "mix_to_mono",
     "recommend_anchor_name",
 ]

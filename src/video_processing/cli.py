@@ -8,6 +8,7 @@ from video_processing.config import load_app_config
 from video_processing.dialogs import pick_input_file, pick_output_directory
 from video_processing.ffmpeg_io import FFmpegCommandError, FFmpegNotAvailableError
 from video_processing.mode_1 import Mode1Result, process_mode_1_job
+from video_processing.mode_2 import Mode2Result, process_mode_2_job
 from video_processing.processing import ProcessResult, process_audio_job
 
 app = typer.Typer(help="Procesado de audio para flujos de edicion de video.")
@@ -15,6 +16,8 @@ INPUT_OPTION = typer.Option(None, "--input")
 OUTPUT_DIR_OPTION = typer.Option(None, "--output-dir")
 FORMAT_OPTION = typer.Option(None, "--format")
 CONFIG_OPTION = typer.Option(None, "--config")
+VIDEO_OPTION = typer.Option(..., "--video")
+AUDIO_OPTION = typer.Option(..., "--audio")
 
 
 @app.callback()
@@ -65,6 +68,24 @@ def _print_mode_1_result(result: Mode1Result | None) -> None:
     typer.echo(f"Plan de edicion guardado en: {result.edit_plan_path}")
     if result.recommended_anchor is not None:
         typer.echo(f"Ancla recomendada: {result.recommended_anchor}")
+
+
+def _print_mode_2_result(result: Mode2Result | None) -> None:
+    if result is None:
+        return
+
+    for warning in result.warnings:
+        typer.echo(f"Aviso: {warning}")
+    typer.echo(f"Audio procesado guardado en: {result.output_path}")
+    typer.echo(f"Plan de edicion guardado en: {result.edit_plan_path}")
+    if result.recommended_anchor is not None:
+        typer.echo(f"Ancla recomendada: {result.recommended_anchor}")
+    if result.video_sync.offset_anchor is not None:
+        typer.echo(
+            "Offset externo-camara: "
+            f"{result.video_sync.external_audio_offset_seconds:.3f} s "
+            f"({result.video_sync.offset_anchor})"
+        )
 
 
 def _resolve_output_format(output_format: str | None, default_output_format: str) -> str:
@@ -136,6 +157,39 @@ def mode_1_command(
     except (FFmpegCommandError, FFmpegNotAvailableError) as error:
         _handle_processing_error(error)
     _print_mode_1_result(result)
+
+
+@app.command("mode-2")
+def mode_2_command(
+    video_path: Path = VIDEO_OPTION,
+    audio_path: Path = AUDIO_OPTION,
+    output_dir: Path | None = OUTPUT_DIR_OPTION,
+    output_format: str | None = FORMAT_OPTION,
+    config_path: Path | None = CONFIG_OPTION,
+) -> None:
+    """Procesa audio externo, calcula el offset con el video y exporta audio + JSON."""
+    config = load_app_config(config_path)
+    resolved_output_dir = _resolve_output_directory(output_dir)
+    resolved_output_format = _resolve_output_format(output_format, config.default_output_format)
+
+    if not video_path.exists():
+        typer.echo(f"No existe el archivo de video: {video_path}")
+        raise typer.Exit(code=1)
+    if not audio_path.exists():
+        typer.echo(f"No existe el archivo de audio: {audio_path}")
+        raise typer.Exit(code=1)
+
+    try:
+        result = process_mode_2_job(
+            video_path=video_path,
+            audio_path=audio_path,
+            output_dir=resolved_output_dir,
+            output_format=resolved_output_format,
+            config=config,
+        )
+    except (FFmpegCommandError, FFmpegNotAvailableError) as error:
+        _handle_processing_error(error)
+    _print_mode_2_result(result)
 
 
 def run_cli() -> int:

@@ -138,3 +138,97 @@ def test_cli_mode_1_shows_clear_message_when_media_has_no_audio(
 
     assert result.exit_code == 1
     assert "El archivo no contiene una pista de audio utilizable para el modo 1." in result.stdout
+
+
+def test_cli_mode_2_uses_explicit_paths_without_opening_dialogs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runner = CliRunner()
+    video_path = tmp_path / "clip.mp4"
+    audio_path = tmp_path / "voice.wav"
+    video_path.write_bytes(b"video")
+    audio_path.write_bytes(b"audio")
+    output_dir = tmp_path / "out"
+    received: dict[str, Path | str] = {}
+
+    monkeypatch.setattr(
+        "video_processing.cli.pick_input_file",
+        lambda: (_ for _ in ()).throw(AssertionError("No deberia abrir selector de archivo")),
+    )
+    monkeypatch.setattr(
+        "video_processing.cli.pick_output_directory",
+        lambda: (_ for _ in ()).throw(AssertionError("No deberia abrir selector de carpeta")),
+    )
+
+    def fake_process_mode_2_job(
+        video_path: Path,
+        audio_path: Path,
+        output_dir: Path,
+        output_format: str,
+        config: object,
+    ) -> None:
+        received["video"] = video_path
+        received["audio"] = audio_path
+        received["output_dir"] = output_dir
+        received["format"] = output_format
+
+    monkeypatch.setattr("video_processing.cli.process_mode_2_job", fake_process_mode_2_job)
+
+    result = runner.invoke(
+        app,
+        [
+            "mode-2",
+            "--video",
+            str(video_path),
+            "--audio",
+            str(audio_path),
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "mp3",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert received == {
+        "video": video_path,
+        "audio": audio_path,
+        "output_dir": output_dir,
+        "format": "mp3",
+    }
+
+
+def test_cli_mode_2_shows_clear_message_when_video_has_no_audio_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runner = CliRunner()
+    video_path = tmp_path / "clip.mp4"
+    audio_path = tmp_path / "voice.wav"
+    video_path.write_bytes(b"video")
+    audio_path.write_bytes(b"audio")
+    output_dir = tmp_path / "out"
+
+    monkeypatch.setattr(
+        "video_processing.cli.process_mode_2_job",
+        lambda video_path, audio_path, output_dir, output_format, config: (_ for _ in ()).throw(
+            FFmpegNoAudioStreamError(
+                "El archivo no contiene una pista de audio utilizable para el modo 2."
+            )
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "mode-2",
+            "--video",
+            str(video_path),
+            "--audio",
+            str(audio_path),
+            "--output-dir",
+            str(output_dir),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "El archivo no contiene una pista de audio utilizable para el modo 2." in result.stdout
