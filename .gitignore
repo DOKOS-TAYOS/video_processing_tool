@@ -1,0 +1,60 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# --- Entornos virtuales ---
+.venv/
+venv/
+env/
+
+# --- Variables de entorno (secretos); mantener ejemplos versionados ---
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# --- Empaquetado / build (Hatch, setuptools, wheel) ---
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+share/python-wheels/
+
+# --- Herramientas de test y calidad ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.nox/
+
+# --- Temporales del proyecto (pytest --basetemp, ffmpeg runtime) ---
+.tmp/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- IDEs y editores ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- Sistema operativo ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Archivos de log / depuración ---
+*.log

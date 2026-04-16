@@ -1,0 +1,29 @@
+[app]
+default_output_format = "wav"
+sample_rate = 48000
+
+[paths]
+filter_curve_csv = "user_curve.csv"
+default_filter_curve_csv = "audacity_default_curve.csv"
+
+[noise_profile]
+start_seconds = 1.0
+duration_seconds = 1.0
+
+[noise_reduction]
+reduction_db = 9.0
+sensitivity = 6.0
+smoothing = 3.0
+
+[loudness]
+target_lufs = -17.0
+
+[peak_normalization]
+target_peak_db = -1.0
+
+[compression]
+threshold_db = -18.0
+ratio = 2.5
+attack_ms = 5.0
+release_ms = 100.0
+makeup_gain_db = 1.0
