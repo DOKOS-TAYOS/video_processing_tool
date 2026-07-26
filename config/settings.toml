@@ -4,6 +4,7 @@ sample_rate = 48000
 
 [paths]
 filter_curve_csv = "user_curve.csv"
+# Project-authored EQ curve inspired by an Audacity-style workflow; not Audacity software.
 default_filter_curve_csv = "audacity_default_curve.csv"
 
 [noise_profile]

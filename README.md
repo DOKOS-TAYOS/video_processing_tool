@@ -1,6 +1,6 @@
 # video-processing
 
-CLI en Python para procesar audio de forma parecida a tu flujo de Audacity y dejar el proyecto listo para fases futuras de sincronizacion y recorte.
+CLI en Python para procesar audio con un flujo inspirado en un workflow personal tipo Audacity (sin afiliacion con el software Audacity) y dejar el proyecto listo para fases futuras de sincronizacion y recorte.
 
 ## Requisitos
 
@@ -52,7 +52,7 @@ La salida mantiene el mismo `edit_plan.json`, ampliado con:
 
 El preset editable vive en `config/settings.toml`.
 
-Si `config/user_curve.csv` no existe, el programa usa `config/audacity_default_curve.csv`.
+Si `config/user_curve.csv` no existe, el programa usa `config/audacity_default_curve.csv` (curva EQ propia de este proyecto, inspirada en un workflow tipo Audacity; no proviene del software Audacity).
 
 La seccion `[sync_detection]` controla la deteccion base para `mode-1`:
 
@@ -90,6 +90,12 @@ El `edit_plan.json` conserva los campos ya existentes y ahora puede incluir:
 - `pause_marker`
 
 Cada operacion registra tiempos de origen y tiempos de salida para poder reutilizar el plan en la fase de video.
+
+## Licencia
+
+MIT — ver `LICENSE`. Copyright (c) 2026 Alejandro Mata Ali.
+
+Dependencias de terceros y FFmpeg (runtime externo, no incluido): `NOTICE` y `THIRD_PARTY_LICENSES.md`.
 
 ## Build Windows
 

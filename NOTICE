@@ -1,0 +1,23 @@
+video_processing_tool / video-processing
+Copyright (c) 2026 Alejandro Mata Ali
+
+Software license
+----------------
+This software and associated documentation files are licensed under the MIT
+License. See the LICENSE file in this repository.
+
+Bundled filter curve data
+-------------------------
+`config/audacity_default_curve.csv` is an original EQ gain curve included with
+this project. The filename and shape are inspired by a personal Audacity-style
+editing workflow used during development. They are not derived from Audacity
+software source code, assets, trademarks, or proprietary materials, and this
+project is not affiliated with, endorsed by, or sponsored by Audacity Team or
+Muse Group.
+
+Third-party software
+--------------------
+Runtime Python dependencies declared in `pyproject.toml` and the external
+FFmpeg runtime requirement are summarized in THIRD_PARTY_LICENSES.md.
+FFmpeg is not bundled; it must be installed separately by the user and remains
+under its own upstream license terms.
